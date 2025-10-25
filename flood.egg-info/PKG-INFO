@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: flood
+Version: 0.0.5
+Summary: Flood Inference Framework
+License: MIT
+Requires-Python: >=3.8
+Dynamic: license
+Dynamic: requires-python
+Dynamic: summary
