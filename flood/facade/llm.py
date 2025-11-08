@@ -214,6 +214,7 @@ class LLM:
         self.logger = logger
         self.debug = debug
         self.kernels = kernels
+        self.processes = []  # Store worker processes for cleanup
 
         if "layer_group_size" in self.conf:
             assert (
@@ -526,6 +527,8 @@ class LLM:
         else:
             fix_slots = None
 
+        # Store process references for cleanup
+        self.processes = []
         for i in range(self.n_proc):
             process = mp.Process(
                 target=self.schedule,
@@ -547,6 +550,7 @@ class LLM:
                 daemon=True,
             )
             process.start()
+            self.processes.append(process)
 
         # wait until all processes are ready
         time.sleep(10)
@@ -2053,3 +2057,20 @@ class LLM:
         vals = list(str(share_value.value))
         vals[index] = str(min(value, 1))
         share_value.value = int("".join(vals))
+
+    def cleanup(self):
+        """Clean up worker processes and release CUDA resources."""
+        if hasattr(self, 'processes') and self.processes:
+            for process in self.processes:
+                if process.is_alive():
+                    process.terminate()
+                    process.join(timeout=2)
+                    if process.is_alive():
+                        process.kill()
+                        process.join()
+            self.processes = []
+        
+
+    def __del__(self):
+        """Destructor to ensure cleanup on object deletion."""
+        self.cleanup()
